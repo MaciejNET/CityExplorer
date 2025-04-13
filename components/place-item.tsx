@@ -1,6 +1,6 @@
 import {Place} from "@/schemas/place";
 import {useState} from "react";
-import {Link} from "expo-router";
+import {useRouter} from "expo-router";
 import ReanimatedSwipeable from "react-native-gesture-handler/ReanimatedSwipeable";
 import {Box} from "@/components/ui/box";
 import {Pressable} from "react-native";
@@ -9,8 +9,21 @@ import {Icon, TrashIcon} from "@/components/ui/icon";
 import {Text} from "@/components/ui/text";
 import {Badge, BadgeText} from "@/components/ui/badge";
 
-export const PlaceItem = ({place, deletePlace}: { place: Place, deletePlace: (id: string) => void }) => {
+type PlaceItemProps = {
+  place: Place;
+  deletePlace: (id: string) => void;
+}
+
+export function PlaceItem(props: PlaceItemProps): JSX.Element {
+  const {place, deletePlace} = props;
   const [isSwiped, setIsSwiped] = useState(false);
+  const router = useRouter();
+
+  const handlePress = () => {
+    if (!isSwiped) {
+      router.push(`/details/${place.id}`);
+    }
+  };
 
   return (
     <ReanimatedSwipeable
@@ -32,16 +45,14 @@ export const PlaceItem = ({place, deletePlace}: { place: Place, deletePlace: (id
         </Box>
       )}
     >
-      <Link disabled={isSwiped} key={place.id} href={`/details/${place.id}`} asChild>
-        <Pressable disabled={isSwiped}>
-          <Card size="md">
-            <Text size="md">{place.name}</Text>
-            <Badge size="lg" action="info" className="w-auto self-start mt-2">
-              <BadgeText>{place.city}</BadgeText>
-            </Badge>
-          </Card>
-        </Pressable>
-      </Link>
+      <Pressable disabled={isSwiped} onPress={handlePress}>
+        <Card size="md">
+          <Text size="md">{place.name}</Text>
+          <Badge size="lg" action="info" className="w-auto self-start mt-2">
+            <BadgeText>{place.city}</BadgeText>
+          </Badge>
+        </Card>
+      </Pressable>
     </ReanimatedSwipeable>
   );
-};
+}
