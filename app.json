@@ -36,6 +36,15 @@
     ],
     "experiments": {
       "typedRoutes": true
-    }
+    },
+    "extra": {
+      "router": {
+        "origin": false
+      },
+      "eas": {
+        "projectId": "a4f9eda0-0c9f-422e-98b7-db310209d2d0"
+      }
+    },
+    "owner": "maciejnet"
   }
 }
