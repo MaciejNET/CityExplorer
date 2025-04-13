@@ -29,7 +29,9 @@ export function PlaceItem(props: PlaceItemProps): JSX.Element {
     <ReanimatedSwipeable
       key={place.id}
       onSwipeableWillOpen={() => setIsSwiped(true)}
+      onSwipeableOpenStartDrag={() => setIsSwiped(true)}
       onSwipeableWillClose={() => setIsSwiped(false)}
+      onSwipeableCloseStartDrag={() => setIsSwiped(false)}
       renderRightActions={(progress, dragAnimatedValue, swipeable) => (
         <Box className="items-center justify-center m-2">
           <Pressable
