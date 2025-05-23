@@ -2,7 +2,7 @@ import {Box} from "@/components/ui/box";
 import {Text} from "@/components/ui/text";
 import {Controller, useForm} from "react-hook-form";
 import {Place, PlaceSchema} from "@/schemas/place";
-import {zodResolver} from "@hookform/resolvers/zod/src";
+import {zodResolver} from "@hookform/resolvers/zod";
 import {useLocalSearchParams, useRouter} from "expo-router";
 import {Input, InputField} from "@/components/ui/input";
 import {Textarea, TextareaInput} from "@/components/ui/textarea";
@@ -12,6 +12,9 @@ import {BackButton} from "@/components/back-button";
 import {usePlacesStore} from "@/stores/places-store";
 import {MapPicker} from "@/components/map-peaker";
 import {Keyboard, ScrollView, TouchableWithoutFeedback} from "react-native";
+import {PhotoPicker} from "@/components/photo-picker";
+import {useEffect, useState} from "react";
+import {Spinner} from "@/components/ui/spinner";
 
 export default function AddEdit() {
   const router = useRouter();
@@ -19,9 +22,49 @@ export default function AddEdit() {
   const {id} = useLocalSearchParams<{ id: string }>();
   const isNew = id === "new";
 
-  const {getPlaceById, addPlace, updatePlace} = usePlacesStore();
+  const {getPlaceById, addPlace, updatePlace, deletePhoto} = usePlacesStore();
 
-  const existingPlace = !isNew ? getPlaceById(id) : undefined;
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [place, setPlace] = useState<Place | undefined>(undefined);
+  const [selectedPhotos, setSelectedPhotos] = useState<{
+    existingPhotoIds: string[],
+    newPhotos: Blob[],
+    photosToDelete: string[]
+  }>({
+    existingPhotoIds: [],
+    newPhotos: [],
+    photosToDelete: []
+  });
+
+  useEffect(() => {
+    if (!isNew) {
+      const fetchPlace = async () => {
+        setIsLoading(true);
+        try {
+          const fetchedPlace = await getPlaceById(id);
+          setPlace(fetchedPlace);
+          if (fetchedPlace) {
+            reset(fetchedPlace);
+            if (fetchedPlace.photoIds) {
+              setSelectedPhotos(prev => ({
+                ...prev,
+                existingPhotoIds: fetchedPlace.photoIds || []
+              }));
+            }
+          }
+        } catch (err) {
+          console.error('Failed to fetch place:', err);
+          setError('Failed to fetch place');
+        } finally {
+          setIsLoading(false);
+        }
+      };
+      fetchPlace();
+    }
+  }, [id, isNew, getPlaceById]);
+
+  const existingPlace = place;
 
   const defaultValues: Place = existingPlace
     ? existingPlace
@@ -33,23 +76,55 @@ export default function AddEdit() {
       location: {
         latitude: 52.2297,
         longitude: 21.0122
-      }
+      },
+      photoIds: []
     };
 
-  const {control, handleSubmit, formState: {errors}} = useForm<Place>({
+  const {control, handleSubmit, formState: {errors}, reset} = useForm({
     resolver: zodResolver(PlaceSchema),
     defaultValues,
     mode: "onChange"
   })
 
-  const onSubmit = (place: Place) => {
-    if (isNew) {
-      addPlace(place);
-    } else {
-      updatePlace(place);
-    }
+  const onSubmit = async (place: Place) => {
+    setIsLoading(true);
+    try {
+      if (isNew) {
+        await addPlace(place, selectedPhotos.newPhotos);
+      } else {
+        for (const photoId of selectedPhotos.photosToDelete) {
+          try {
+            await deletePhoto(place.id, photoId);
+            console.log(`Photo ${photoId} deleted successfully`);
+          } catch (photoError) {
+            console.error(`Failed to delete photo ${photoId}:`, photoError);
+          }
+        }
 
-    router.back();
+        await updatePlace(place, selectedPhotos.newPhotos);
+      }
+      router.back();
+    } catch (err) {
+      console.error('Failed to save place:', err);
+      setError('Failed to save place');
+    } finally {
+      setIsLoading(false);
+    }
+  }
+
+  if (isLoading) {
+    return (
+      <Box className="p-3">
+        <Box className="relative flex items-center justify-center w-full mb-4">
+          <Box className="absolute left-0">
+            <BackButton/>
+          </Box>
+          <Box className="flex items-center justify-center">
+            <Spinner size="large" text="Loading place data..."/>
+          </Box>
+        </Box>
+      </Box>
+    );
   }
 
   if (!isNew && !existingPlace) {
@@ -149,8 +224,26 @@ export default function AddEdit() {
               )}
             />
 
-            <Button className="mt-2" onPress={handleSubmit(onSubmit)}>
-              <ButtonText>Save</ButtonText>
+            <Box className="my-4">
+              <PhotoPicker
+                existingPhotoIds={existingPlace?.photoIds || []}
+                onPhotosSelected={setSelectedPhotos}
+              />
+            </Box>
+
+            {error && (
+              <Text className="text-red-500 mt-1">{error}</Text>
+            )}
+
+            <Button className="mt-2" onPress={handleSubmit(onSubmit)} disabled={isLoading}>
+              {isLoading ? (
+                <Box className="flex-row items-center">
+                  <Spinner size="small" color="white"/>
+                  <ButtonText className="ml-2">Saving...</ButtonText>
+                </Box>
+              ) : (
+                <ButtonText>Save</ButtonText>
+              )}
             </Button>
           </Box>
         </Box>

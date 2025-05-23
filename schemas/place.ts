@@ -15,6 +15,7 @@ export const PlaceSchema = z.object({
     latitude: z.number(),
     longitude: z.number(),
   }),
+  photoIds: z.array(z.string()).default([]),
 });
 
 export type Place = z.infer<typeof PlaceSchema>;
