@@ -43,30 +43,16 @@ export const placesApi = {
 
       console.log('File data prepared:', fileData);
 
-      return new Promise((resolve, reject) => {
-        const xhr = new XMLHttpRequest();
-        xhr.open('POST', `${api.defaults.baseURL}/places/${placeId}/photo`);
+      const formData = new FormData();
+      formData.append('file', fileData as any);
 
-        xhr.onload = () => {
-          if (xhr.status >= 200 && xhr.status < 300) {
-            console.log('Photo uploaded successfully');
-            resolve();
-          } else {
-            console.error('Upload failed with status:', xhr.status);
-            reject(new Error(`Upload failed with status ${xhr.status}`));
-          }
-        };
-
-        xhr.onerror = () => {
-          console.error('XHR error occurred during upload');
-          reject(new Error('Network error occurred during upload'));
-        };
-
-        const formData = new FormData();
-        formData.append('file', fileData as any);
-
-        xhr.send(formData);
+      await api.post(`/places/${placeId}/photo`, formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
       });
+
+      console.log('Photo uploaded successfully');
     } catch (error: any) {
       console.error('Error uploading photo:', error);
       throw error;
